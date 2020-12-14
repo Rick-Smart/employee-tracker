@@ -12,7 +12,7 @@ async function init() {
       editDepartments();
       break;
     case "Edit Role":
-      // multiSearch();
+      editRole();
       break;
     case "Edit Employee":
       editEmployee();
@@ -93,15 +93,22 @@ async function removeDepartment() {
           })),
         },
       ]);
-      connection.query("DELETE FROM department WHERE ?", {
-        dept: data.departments,
-      });
-      console.log(res.affectedRows + " -- Department Removed --\n");
-      // Call updateProduct AFTER the INSERT completes
-      init();
+      connection.query(
+        "DELETE FROM department WHERE ?",
+        {
+          dept: data.departments,
+        },
+        function (err, res) {
+          if (err) throw err;
+          console.log(res.affectedRows + " -- Department Removed --\n");
+          // Call updateProduct AFTER the INSERT completes
+          init();
+        }
+      );
     }
   );
 }
+
 async function editEmployee() {
   const { employee } = await inquirer.prompt({
     name: "employee",
@@ -118,6 +125,7 @@ async function editEmployee() {
     init();
   }
 }
+
 async function addEmployee() {
   const employeeName = await inquirer.prompt([
     {
@@ -148,23 +156,23 @@ async function addEmployee() {
       message: "Is this person a manager",
     },
   ]);
-  switch (employeeName.roleID) {
-    case "Intern":
-      employeeName.roleID = 1;
-      break;
-    case "Engineer":
-      employeeName.roleID = 2;
-      break;
-    case "Code Wizard":
-      employeeName.roleID = 3;
-      break;
-    case "Cat Herder":
-      employeeName.roleID = 4;
-      break;
-    case "OnlyFans/Self Employeed":
-      employeeName.roleID = 5;
-      break;
-  }
+  // switch (employeeName.roleID) {
+  //   case "Intern":
+  //     employeeName.roleID = 1;
+  //     break;
+  //   case "Engineer":
+  //     employeeName.roleID = 2;
+  //     break;
+  //   case "Code Wizard":
+  //     employeeName.roleID = 3;
+  //     break;
+  //   case "Cat Herder":
+  //     employeeName.roleID = 4;
+  //     break;
+  //   case "OnlyFans/Self Employeed":
+  //     employeeName.roleID = 5;
+  //     break;
+  // }
   switch (employeeName.managerID) {
     case true:
       employeeName.managerID = 1;
@@ -190,84 +198,116 @@ async function addEmployee() {
     }
   );
 }
+
 // this is where the remove employee function will go.
-async function removeDepartment() {
+async function removeEmployee() {
   connection.query(
-    "SELECT dept AS departments FROM department",
-    async function (err, departments) {
+    "SELECT first_name AS firstName, last_name AS lastName FROM employee",
+    async function (err, employees) {
       const data = await inquirer.prompt([
         {
-          name: "departments",
-          message: "What department would you like to remove?",
+          name: "employees",
+          message: "Which employee would you like to remove?",
           type: "list",
-          choices: departments.map((department) => ({
-            name: department.departments,
+          choices: employees.map((employee) => ({
+            name: employee.firstName + " " + employee.lastName,
           })),
         },
       ]);
-      connection.query("DELETE FROM department WHERE ?", {
-        dept: data.departments,
-      });
-      console.log(res.affectedRows + " -- Department Removed --\n");
-      // Call updateProduct AFTER the INSERT completes
+
+      // console.log(data);
+      const firstAndLast = data.employees.split(" ");
+      // console.log(firstAndLast[1]);
+
+      connection.query(
+        "DELETE FROM employee WHERE first_name = ? AND last_name = ?",
+        [firstAndLast[0], firstAndLast[1]]
+      );
       init();
     }
   );
 }
 
-// * A query which returns all artists who appear within the top 5000 more than once
-async function multiSearch() {
-  const query =
-    "SELECT artist, count(*) AS count FROM top5000 GROUP BY artist HAVING count(*) > 1 ORDER BY count DESC";
-  const data = await connection.query(query);
-  console.table(data);
-  init();
-}
-// * A query which returns all data contained within a specific range
-async function rangeSearch() {
-  const { start, end } = await inquirer.prompt([
-    {
-      name: "start",
-      type: "input",
-      message: "Enter starting position: ",
-      validate: function (value) {
-        if (isNaN(value) === false) {
-          return true;
-        }
-        return false;
-      },
-    },
-    {
-      name: "end",
-      type: "input",
-      message: "Enter ending position: ",
-      validate: function (value) {
-        if (isNaN(value) === false) {
-          return true;
-        }
-        return false;
-      },
-    },
-  ]);
+async function editRole() {
+  const { role } = await inquirer.prompt({
+    name: "role",
+    type: "list",
+    message: "What would you like to do?",
+    choices: ["Add Role", "Remove Role", "Update Role", "Exit"],
+  });
 
-  const query = `SELECT position,song,artist,year FROM top5000 WHERE position BETWEEN ${connection.escape(
-    start
-  )} AND ${connection.escape(end)}`;
-  const data = await connection.query(query);
-  console.table(data);
-  init();
+  if (role == "Add Role") {
+    addRole();
+  } else if (role == "Remove Role") {
+    removeRole();
+  } else if (role == "Update Role") {
+    updateRole();
+  } else {
+    init();
+  }
 }
 
-// * A query which searches for a specific song in the top 5000 and returns the data for it
-async function specificSong() {
-  const { song } = await inquirer.prompt({
-    name: "song",
-    type: "input",
-    message: "What song would you like to look for?",
+async function addRole() {
+  connection.query("SELECT * FROM role", async function (err, roles) {
+    if (err) {
+      console.log(err);
+    }
+    const { roleTitle } = await inquirer.prompt([
+      {
+        name: "roleTitle",
+        type: "input",
+        message: "What is the new roles title?",
+      },
+      {
+        name: "roleSalary",
+        type: "number",
+        message: "What is the salary for this role?",
+      },
+      {
+        name: "roleDept",
+        type: "list",
+        message: "What department is this role in?",
+        choices: roles.map((newRoles) => ({
+          name: newRoles.title,
+        })),
+      },
+    ]);
+
+    // console.log(data);
   });
-  const data = await connection.query("SELECT * FROM top5000 WHERE ?", {
-    song,
-  });
-  console.table(data);
-  init();
+  switch (data.roleDept) {
+    case "Intern":
+      data.roleDept = 1;
+      break;
+    case "Engineer":
+      data.roleDept = 2;
+      break;
+    case "Code Wizard":
+      data.roleDept = 3;
+      break;
+    case "Cat Herder":
+      data.roleDept = 4;
+      break;
+    case "OnlyFans/Self Employeed":
+      data.roleDept = 5;
+      break;
+  }
+
+  const query = await connection.query(
+    "INSERT INTO role SET ?",
+    {
+      title: data.roleTitle,
+      salary: data.roleSalary,
+      dept_id: data.roleDept,
+    },
+
+    function (err, res) {
+      if (err) throw err;
+      console.log(res.affectedRows + " -- New Employee Added --\n");
+      init();
+    }
+  );
 }
+async function removeRole() {}
+
+async function updateRole() {}
