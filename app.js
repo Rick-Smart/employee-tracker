@@ -127,6 +127,8 @@ async function editEmployee() {
 }
 
 async function addEmployee() {
+  const departments = await connection.query("SELECT dept, id FROM department");
+
   const employeeName = await inquirer.prompt([
     {
       name: "firstName",
@@ -141,14 +143,8 @@ async function addEmployee() {
     {
       name: "roleID",
       type: "list",
-      message: "What is the employees role?",
-      choices: [
-        "Intern",
-        "Engineer",
-        "Code Wizard",
-        "Cat Herder",
-        "OnlyFans/Self Employeed",
-      ],
+      message: "What department is this employees role associated?",
+      choices: departments.map((row) => ({ name: row.dept, value: row.id })),
     },
     {
       name: "managerID",
@@ -178,7 +174,7 @@ async function addEmployee() {
       employeeName.managerID = 1;
       break;
     case false:
-      employee.managerID = 0;
+      employeeName.managerID = 0;
       break;
   }
 
@@ -199,7 +195,6 @@ async function addEmployee() {
   );
 }
 
-// this is where the remove employee function will go.
 async function removeEmployee() {
   connection.query(
     "SELECT first_name AS firstName, last_name AS lastName FROM employee",
@@ -221,9 +216,13 @@ async function removeEmployee() {
 
       connection.query(
         "DELETE FROM employee WHERE first_name = ? AND last_name = ?",
-        [firstAndLast[0], firstAndLast[1]]
+        [firstAndLast[0], firstAndLast[1]],
+        function (err, res) {
+          if (err) throw err;
+          console.log(res.affectedRows + " -- Employee Removed --\n");
+          init();
+        }
       );
-      init();
     }
   );
 }
